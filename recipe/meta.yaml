@@ -1,5 +1,5 @@
 {% set name = "leocad" %}
-{% set version = "21.01" %}
+{% set version = "21.03" %}
 
 package:
   name: {{ name|lower }}
@@ -7,12 +7,12 @@ package:
 
 source:
   url: https://github.com/leozide/leocad/archive/v{{ version }}.tar.gz
-  sha256: d57576ced3855e1b57aa7e310c81929505db57e88a891094972579b2481bf0d6
+  sha256: af7e59fe8367a88a3721a125b021ecba1eb9628eed928bdea7a37b6d41c7ccd6
   patches:
     - ldraw-library-path.patch
 
 build:
-  number: 1
+  number: 0
   skip: true  # [not linux]
 
 requirements:
