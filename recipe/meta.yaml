@@ -12,7 +12,7 @@ source:
     - ldraw-library-path.patch
 
 build:
-  number: 0
+  number: 1
   skip: true  # [not linux]
 
 requirements:
@@ -28,7 +28,7 @@ requirements:
     - {{ cdt('libxxf86vm') }}        # [linux]
     - {{ cdt('libxext') }}           # [linux]
   host:
-    - qt
+    - qt-main
     - ldraw-parts
     - xorg-libxfixes                 # [linux]
     - zlib
