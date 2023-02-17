@@ -10,6 +10,7 @@ source:
   sha256: bd28c47f920fa1bc458b6e5f476b93ccc1aa40e30158a3dd2397368cc3d79099
   patches:
     - ldraw-library-path.patch
+    - patch-project-osx.patch
 
 build:
   number: 0
