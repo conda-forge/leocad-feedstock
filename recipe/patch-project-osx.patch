@@ -1,0 +1,36 @@
+From ad449e3091d6c37451f66cc55749cd4e6d5e7931 Mon Sep 17 00:00:00 2001
+From: Sylvain Corlay <sylvain.corlay@gmail.com>
+Date: Fri, 17 Feb 2023 17:04:08 +0100
+Subject: [PATCH] patch-project-osx
+
+---
+ leocad.pro | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/leocad.pro b/leocad.pro
+index c57c515a..1bf9542e 100644
+--- a/leocad.pro
++++ b/leocad.pro
+@@ -155,13 +155,13 @@ macx {
+ 
+ 	document_icon.files += $$_PRO_FILE_PWD_/resources/leocad_document.icns
+ 	document_icon.path = Contents/Resources
+-	library.files += $$_PRO_FILE_PWD_/library.bin
+-	library.path = Contents/Resources
+-	povray.files += $$_PRO_FILE_PWD_/povray
+-	povray.path = Contents/MacOS
++	#library.files += $$_PRO_FILE_PWD_/library.bin
++	#library.path = Contents/Resources
++	#povray.files += $$_PRO_FILE_PWD_/povray
++	#povray.path = Contents/MacOS
+ 
+-	QMAKE_BUNDLE_DATA += document_icon library povray
+-	DEFINES += LC_DISABLE_UPDATE_CHECK=1
++	#QMAKE_BUNDLE_DATA += document_icon library povray
++	#DEFINES += LC_DISABLE_UPDATE_CHECK=1
+ }
+ 
+ SOURCES += \
+-- 
+2.30.1 (Apple Git-130)
+
