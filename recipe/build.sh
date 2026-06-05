@@ -24,4 +24,5 @@ qmake \
   QMAKE_CXXFLAGS="${CXXFLAGS}" \
   ../leocad.pro
 
+make
 make install
