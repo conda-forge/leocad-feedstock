@@ -1,23 +1,23 @@
 {% set name = "leocad" %}
-{% set version = "21.06" %}
+{% set version = "26.09" %}
 
 package:
   name: {{ name|lower }}
-  version: {{ version }}
+  version: "{{ version }}"
 
 source:
   url: https://github.com/leozide/leocad/archive/v{{ version }}.tar.gz
-  sha256: bd28c47f920fa1bc458b6e5f476b93ccc1aa40e30158a3dd2397368cc3d79099
+  sha256: 01c78e274cb2e3d496d6e904333f1cff88afb94929b5c9c7eb42bc018f3a530b
   patches:
     - ldraw-library-path.patch
 
 build:
   number: 0
-  skip: true  # [not linux]
 
 requirements:
   build:
     - {{ compiler('cxx') }}
+    - {{ stdlib("c") }}
     - make
     # Required to link with libGL
     - libglu                         # [linux]
