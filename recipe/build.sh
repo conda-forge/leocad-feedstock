@@ -10,12 +10,6 @@ if [[ "$(uname)" == "Linux" ]]; then
     export PLATFORM=linux-g++-32;
   fi
 
-  # Link against libGL from the host prefix (libgl-devel).
-  GL_SYSROOT_LIB=$(find ${PREFIX} -name libGL.so 2>/dev/null | head -n 1)
-  if [[ -n ${GL_SYSROOT_LIB} ]]; then
-    echo "QMAKE_LIBS_OPENGL=${GL_SYSROOT_LIB}" >> ../leocad.pro
-  fi
-
   # Missing g++ workaround.
   ln -s "$(command -v ${CXX})" g++ || true
   chmod +x g++ || true
