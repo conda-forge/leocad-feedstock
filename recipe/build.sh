@@ -10,8 +10,8 @@ if [[ "$(uname)" == "Linux" ]]; then
     export PLATFORM=linux-g++-32;
   fi
 
-  # Link against libGL from the CDT sysroot when it is available there.
-  GL_SYSROOT_LIB=$(find ${BUILD_PREFIX} -name libGL.so 2>/dev/null | head -n 1)
+  # Link against libGL from the host prefix (libgl-devel) or the build prefix.
+  GL_SYSROOT_LIB=$(find ${PREFIX} ${BUILD_PREFIX} -name libGL.so 2>/dev/null | head -n 1)
   if [[ -n ${GL_SYSROOT_LIB} ]]; then
     echo "QMAKE_LIBS_OPENGL=${GL_SYSROOT_LIB}" >> ../leocad.pro
   fi
