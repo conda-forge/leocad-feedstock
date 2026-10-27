@@ -1,18 +1,30 @@
 mkdir build
 cd build
 
-if [[ "$ARCH" == "64" ]]; then
-  export PLATFORM=linux-g++-64;
-else
-  export PLATFORM=linux-g++-32;
+QMAKE_EXTRA_ARGS=
+
+if [[ "$(uname)" == "Linux" ]]; then
+  if [[ "$ARCH" == "64" ]]; then
+    export PLATFORM=linux-g++-64;
+  else
+    export PLATFORM=linux-g++-32;
+  fi
+
+  # Link against libGL from the CDT sysroot when it is available there.
+  GL_SYSROOT_LIB=$(find ${BUILD_PREFIX} -name libGL.so 2>/dev/null | head -n 1)
+  if [[ -n ${GL_SYSROOT_LIB} ]]; then
+    echo "QMAKE_LIBS_OPENGL=${GL_SYSROOT_LIB}" >> ../leocad.pro
+  fi
+
+  # Missing g++ workaround.
+  ln -s "$(command -v ${CXX})" g++ || true
+  chmod +x g++ || true
+  export PATH=${PWD}:${PATH}
 fi
 
-if [[ ${HOST} =~ .*linux.* ]]; then
-  echo "QMAKE_LIBS_OPENGL=${BUILD_PREFIX}/${HOST}/sysroot/usr/lib64/libGL.so" >> ../leocad.pro
-  # Missing g++ workaround.
-  ln -s ${GXX} g++ || true
-  chmod +x g++
-  export PATH=${PWD}:${PATH}
+if [[ "$(uname)" == "Darwin" ]]; then
+  # Build a plain executable installed into the prefix instead of an app bundle.
+  QMAKE_EXTRA_ARGS="NO_BUNDLE=1"
 fi
 
 qmake \
@@ -22,6 +34,7 @@ qmake \
   INSTALL_PREFIX=$PREFIX \
   QMAKE_LFLAGS="${LDFLAGS}" \
   QMAKE_CXXFLAGS="${CXXFLAGS}" \
+  ${QMAKE_EXTRA_ARGS} \
   ../leocad.pro
 
 make install
