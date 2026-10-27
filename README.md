@@ -9,7 +9,7 @@ Package license: GPL-2.0-only
 
 Summary: A CAD program for creating virtual LEGO models
 
-Development: https://www.leocad.org/
+Development: https://github.com/leozide/leocad
 
 Documentation: https://www.leocad.org/
 
@@ -19,7 +19,6 @@ too much time learning the application.
 At the same time, it has a rich feature set that
 enables experienced users to build models by using
 techniques that are more advanced.
-
 
 Current build status
 ====================

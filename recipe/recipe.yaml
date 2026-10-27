@@ -1,0 +1,70 @@
+schema_version: 1
+
+context:
+  name: leocad
+  version: "26.09"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  url: https://github.com/leozide/leocad/archive/v${{ version }}.tar.gz
+  sha256: 01c78e274cb2e3d496d6e904333f1cff88afb94929b5c9c7eb42bc018f3a530b
+  patches:
+    - ldraw-library-path.patch
+    - macos-no-bundle.patch
+
+build:
+  number: 0
+  script: build.sh
+
+requirements:
+  build:
+    - ${{ compiler("cxx") }}
+    - ${{ stdlib("c") }}
+    - make
+    - if: linux
+      then:
+        # Required to link with libGL
+        - libglu
+        - ${{ cdt("mesa-libgl-devel") }}
+        - ${{ cdt("mesa-dri-drivers") }}
+        - ${{ cdt("libselinux") }}
+        - ${{ cdt("libxdamage") }}
+        - ${{ cdt("libxxf86vm") }}
+        - ${{ cdt("libxext") }}
+  host:
+    - qt-main
+    - ldraw-parts
+    - zlib
+    - if: linux
+      then:
+        - xorg-libxfixes
+  run:
+    - ldraw-parts
+
+tests:
+  - script:
+      - test -f $PREFIX/bin/leocad
+
+about:
+  homepage: https://github.com/leozide/leocad
+  repository: https://github.com/leozide/leocad
+  documentation: https://www.leocad.org/
+  license: GPL-2.0-only
+  license_file:
+    - docs/COPYING.txt
+  summary: A CAD program for creating virtual LEGO models
+  description: |
+    LeoCAD has an intuitive interface that is designed to allow
+    new users to start creating new models without having to spend
+    too much time learning the application.
+    At the same time, it has a rich feature set that
+    enables experienced users to build models by using
+    techniques that are more advanced.
+
+extra:
+  recipe-maintainers:
+    - SylvainCorlay
+    - derthorsten
