@@ -24,8 +24,14 @@ fi
 
 if [[ "$(uname)" == "Darwin" ]]; then
   # Build a plain executable installed into the prefix instead of an app bundle.
-  QMAKE_EXTRA_ARGS="NO_BUNDLE=1"
+  QMAKE_EXTRA_ARGS="DISABLE_MACOS_BUNDLE=1"
 fi
+
+# Default the POV-Ray executable to the one in this conda prefix instead of
+# /usr/bin/povray, so the render dialog works out of the box when povray is
+# installed in the same environment. Still overridable via the POVRay/Path
+# preference. Same approach as LDRAW_LIBRARY_PATH below.
+sed -i.bak "s|\"/usr/bin/povray\"|\"${PREFIX}/bin/povray\"|" ../common/lc_profile.cpp
 
 qmake \
   DISABLE_UPDATE_CHECK=1 \

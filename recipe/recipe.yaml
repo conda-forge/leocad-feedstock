@@ -13,10 +13,10 @@ source:
   sha256: 01c78e274cb2e3d496d6e904333f1cff88afb94929b5c9c7eb42bc018f3a530b
   patches:
     - ldraw-library-path.patch
-    - macos-no-bundle.patch
+    - disable-macos-bundle.patch
 
 build:
-  number: 0
+  number: 1
   script: build.sh
 
 requirements:
