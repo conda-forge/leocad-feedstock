@@ -1,0 +1,353 @@
+# Support macOS builds without an application bundle, using the system POV-Ray.
+# Adapted from upstream commit c5283728f8 ("Support macOS builds without an
+# application bundle", closes leozide/leocad#847), checked in on master after
+# https://github.com/leozide/leocad/pull/1071 was closed unmerged.
+# Applies on top of the v26.09 tarball, after ldraw-library-path.patch.
+
+diff --git a/common/lc_blenderpreferences.cpp b/common/lc_blenderpreferences.cpp
+index 9674cf3..90a8dd0 100644
+--- a/common/lc_blenderpreferences.cpp
++++ b/common/lc_blenderpreferences.cpp
+@@ -13,7 +13,7 @@
+ #include "project.h"
+ #include <zlib.h>
+ 
+-#ifndef LC_DISABLE_BLENDER
++#if !LC_DISABLE_BLENDER
+ 
+ #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+ using Qt::SkipEmptyParts;
+diff --git a/common/lc_blenderpreferences.h b/common/lc_blenderpreferences.h
+index 78aeafb..a5986cb 100644
+--- a/common/lc_blenderpreferences.h
++++ b/common/lc_blenderpreferences.h
+@@ -1,6 +1,6 @@
+ #pragma once
+ 
+-#ifndef LC_DISABLE_BLENDER
++#if !LC_DISABLE_BLENDER
+ 
+ #define LC_UNIX_SHELL                  "/bin/sh"
+ #define LC_WINDOWS_SHELL               "cmd.exe"
+diff --git a/common/lc_mainwindow.cpp b/common/lc_mainwindow.cpp
+index e55dfd6..321b59b 100644
+--- a/common/lc_mainwindow.cpp
++++ b/common/lc_mainwindow.cpp
+@@ -30,7 +30,7 @@
+ 
+ #if LC_ENABLE_GAMEPAD
+ #include <QtGamepad/QGamepad>
+-#endif
++#endif // LC_ENABLE_GAMEPAD
+ 
+ lcMainWindow* gMainWindow;
+ #define LC_TAB_LAYOUT_VERSION 0x0001
+@@ -452,12 +452,12 @@ void lcMainWindow::CreateMenus()
+ 	ExportMenu->addAction(mActions[LC_FILE_EXPORT_POVRAY]);
+ 	ExportMenu->addAction(mActions[LC_FILE_EXPORT_WAVEFRONT]);
+ 	FileMenu->addSeparator();
+-#ifndef LC_DISABLE_RENDER_DIALOG
++#if !LC_DISABLE_RENDER_DIALOG
+ 	QMenu* RenderMenu = FileMenu->addMenu(tr("&Render"));
+ 	RenderMenu->addAction(mActions[LC_FILE_RENDER_POVRAY]);
+ 	RenderMenu->addAction(mActions[LC_FILE_RENDER_BLENDER]);
+ 	RenderMenu->addAction(mActions[LC_FILE_RENDER_OPEN_IN_BLENDER]);
+-#endif
++#endif // !LC_DISABLE_RENDER_DIALOG
+ 	FileMenu->addAction(mActions[LC_FILE_INSTRUCTIONS]);
+ 	FileMenu->addAction(mActions[LC_FILE_PRINT]);
+ 	FileMenu->addAction(mActions[LC_FILE_PRINT_PREVIEW]);
+@@ -570,7 +570,7 @@ void lcMainWindow::CreateMenus()
+ 	HelpMenu->addAction(mActions[LC_HELP_BUG_REPORT]);
+ #if !LC_DISABLE_UPDATE_CHECK
+ 	HelpMenu->addAction(mActions[LC_HELP_UPDATES]);
+-#endif
++#endif // !LC_DISABLE_UPDATE_CHECK
+ #ifndef Q_OS_MACOS
+ 	HelpMenu->addSeparator();
+ #endif
+@@ -1038,7 +1038,7 @@ void lcMainWindow::UpdateGamepads()
+ 
+ 	if (fabsf(Distance.LengthSquared()) > 0.01f)
+ 		ActiveView->MoveCamera(Distance);
+-#endif
++#endif // LC_ENABLE_GAMEPAD
+ }
+ 
+ void lcMainWindow::ModelTabContextMenuRequested(const QPoint& Point)
+@@ -1334,10 +1334,10 @@ void lcMainWindow::ShowExportPOVRayDialog()
+ 
+ void lcMainWindow::ShowRenderDialog(lcRenderDialogMode RenderDialogMode)
+ {
+-#ifndef LC_DISABLE_RENDER_DIALOG
++#if !LC_DISABLE_RENDER_DIALOG
+ 	lcRenderDialog Dialog(this, RenderDialogMode);
+ 	Dialog.exec();
+-#endif
++#endif // !LC_DISABLE_RENDER_DIALOG
+ }
+ 
+ void lcMainWindow::ShowInstructionsDialog()
+diff --git a/leocad.pro b/leocad.pro
+index c4a8f21..a5fd525 100644
+--- a/leocad.pro
++++ b/leocad.pro
+@@ -19,7 +19,7 @@ greaterThan(QT_MAJOR_VERSION, 5) {
+ 
+ qtHaveModule(gamepad) {
+ 	QT += gamepad
+-	DEFINES += LC_ENABLE_GAMEPAD
++	DEFINES += LC_ENABLE_GAMEPAD=1
+ }
+ 
+ INCLUDEPATH += qt common
+@@ -37,6 +37,7 @@ win32 {
+ 
+ 	LIBS += -lwininet
+ }
++
+ win32-msvc* {
+ 	QMAKE_CXXFLAGS_WARN_ON += /W4 -wd4100
+ 	QMAKE_CXXFLAGS *= /MP
+@@ -54,6 +55,14 @@ win32-msvc* {
+ 	QMAKE_CXXFLAGS += -Werror=unused-result
+ }
+ 
++!isEmpty(DISABLE_UPDATE_CHECK) {
++	DEFINES += LC_DISABLE_UPDATE_CHECK=$$DISABLE_UPDATE_CHECK
++}
++
++!isEmpty(LDRAW_LIBRARY_PATH) {
++	DEFINES += LC_LDRAW_LIBRARY_PATH=\\\"$$LDRAW_LIBRARY_PATH\\\"
++}
++
+ isEmpty(QMAKE_LRELEASE) {
+ 	win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
+ 	else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+@@ -91,8 +100,10 @@ QMAKE_EXTRA_COMPILERS += lrelease
+ 
+ system($$QMAKE_LRELEASE -silent $$TSFILES)
+ 
+-unix:!macx {
++unix:if(!macx|!isEmpty(DISABLE_MACOS_BUNDLE)) {
+ 	TARGET = leocad
++	COPY_INSTALL_FILES = yes
++	DEFINES += LC_ENABLE_SYSTEM_POVRAY=1
+ } else {
+ 	TARGET = LeoCAD
+ }
+@@ -108,7 +119,36 @@ MOC_DIR = $$DESTDIR/.moc
+ RCC_DIR = $$DESTDIR/.qrc
+ UI_DIR = $$DESTDIR/.ui
+ 
+-unix:!macx {
++macx {
++	ICON = resources/leocad.icns
++	QMAKE_INFO_PLIST = qt/Info.plist
++
++	document_icon.files += $$_PRO_FILE_PWD_/resources/leocad_document.icns
++	document_icon.path = Contents/Resources
++	QMAKE_BUNDLE_DATA += document_icon
++
++	CI = $$(CI)
++
++	!isEmpty(CI)|exists($$_PRO_FILE_PWD_/library.bin) {
++		library.files += $$_PRO_FILE_PWD_/library.bin
++		library.path = Contents/Resources
++		QMAKE_BUNDLE_DATA += library
++	}
++
++	!isEmpty(CI)|exists($$_PRO_FILE_PWD_/povray) {
++		povray.files += $$_PRO_FILE_PWD_/povray
++		povray.path = Contents/MacOS
++		QMAKE_BUNDLE_DATA += povray
++	}
++
++	DEFINES += LC_DISABLE_UPDATE_CHECK=1
++
++	!isEmpty(DISABLE_MACOS_BUNDLE) {
++		CONFIG -= app_bundle
++	}
++}
++
++!isEmpty(COPY_INSTALL_FILES) {
+ 	isEmpty(INSTALL_PREFIX):INSTALL_PREFIX = /usr
+ 	isEmpty(BIN_DIR):BIN_DIR = $$INSTALL_PREFIX/bin
+ 	isEmpty(DOCS_DIR):DOCS_DIR = $$INSTALL_PREFIX/share/doc/leocad
+@@ -141,29 +181,6 @@ unix:!macx {
+ 	appdata.files = tools/setup/leocad.appdata.xml
+ 
+ 	INSTALLS += target docs man desktop icons mime appdata
+-
+-	!isEmpty(DISABLE_UPDATE_CHECK) {
+-		DEFINES += LC_DISABLE_UPDATE_CHECK=$$DISABLE_UPDATE_CHECK
+-	}
+-
+-	!isEmpty(LDRAW_LIBRARY_PATH) {
+-		DEFINES += LC_LDRAW_LIBRARY_PATH=\\\"$$LDRAW_LIBRARY_PATH\\\"
+-	}
+-}
+-
+-macx {
+-	ICON = resources/leocad.icns
+-	QMAKE_INFO_PLIST = qt/Info.plist
+-
+-	document_icon.files += $$_PRO_FILE_PWD_/resources/leocad_document.icns
+-	document_icon.path = Contents/Resources
+-	library.files += $$_PRO_FILE_PWD_/library.bin
+-	library.path = Contents/Resources
+-	povray.files += $$_PRO_FILE_PWD_/povray
+-	povray.path = Contents/MacOS
+-
+-	QMAKE_BUNDLE_DATA += document_icon library povray
+-	DEFINES += LC_DISABLE_UPDATE_CHECK=1
+ }
+ 
+ ios {
+diff --git a/qt/lc_qpreferencesdialog.cpp b/qt/lc_qpreferencesdialog.cpp
+index d8d76d6..195dd7a 100644
+--- a/qt/lc_qpreferencesdialog.cpp
++++ b/qt/lc_qpreferencesdialog.cpp
+@@ -24,13 +24,13 @@ lcPreferencesDialog::lcPreferencesDialog(QWidget* Parent, lcPreferencesDialogOpt
+ {
+ 	ui->setupUi(this);
+ 
+-#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
++#if !LC_ENABLE_SYSTEM_POVRAY
+ 	ui->povrayLabel->hide();
+ 	ui->povrayExecutable->hide();
+ 	ui->povrayExecutableBrowse->hide();
+ 	delete ui->povrayLabel;
+ 	delete ui->povrayLayout;
+-#endif
++#endif // !LC_ENABLE_SYSTEM_POVRAY
+ 
+ 	ui->Language->addItem("\u010cesky");
+ 	ui->Language->addItem("Deutsch");
+@@ -426,7 +426,7 @@ void lcPreferencesDialog::PartsArchiveBrowseClicked()
+ 
+ void lcPreferencesDialog::BlenderAddonSettingsButtonClicked()
+ {
+-#ifndef LC_DISABLE_BLENDER
++#if !LC_DISABLE_BLENDER
+ 	int Width = 1280;
+ 	int Height = 720;
+ 	double Scale = 1.0f;
+@@ -436,7 +436,7 @@ void lcPreferencesDialog::BlenderAddonSettingsButtonClicked()
+ 		Height,
+ 		Scale,
+ 		this);
+-#endif // !LC_BLENDER_DISABLED
++#endif // !LC_DISABLE_BLENDER
+ }
+ 
+ void lcPreferencesDialog::ColorConfigBrowseButtonClicked()
+diff --git a/qt/lc_renderdialog.cpp b/qt/lc_renderdialog.cpp
+index 96b9f8d..1d4c96e 100644
+--- a/qt/lc_renderdialog.cpp
++++ b/qt/lc_renderdialog.cpp
+@@ -8,13 +8,13 @@
+ #include "lc_model.h"
+ #include "lc_qutils.h"
+ 
+-#ifndef LC_DISABLE_RENDER_DIALOG
++#if !LC_DISABLE_RENDER_DIALOG
+ 
+ #define LC_POVRAY_PREVIEW_WIDTH 768
+ #define LC_POVRAY_PREVIEW_HEIGHT 432
+-#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
++#if !LC_ENABLE_SYSTEM_POVRAY
+ #define LC_POVRAY_MEMORY_MAPPED_FILE 1
+-#endif
++#endif // !LC_ENABLE_SYSTEM_POVRAY
+ 
+ void lcRenderPreviewWidget::resizeEvent(QResizeEvent* Event)
+ {
+@@ -289,19 +289,15 @@ void lcRenderDialog::RenderPOVRay()
+ 
+ 	QString POVRayPath;
+ 
+-#ifdef Q_OS_WIN
+-	POVRayPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + QLatin1String("/povconsole32-sse2.exe"));
+-#endif
+-
+-#ifdef Q_OS_LINUX
++#if LC_ENABLE_SYSTEM_POVRAY
+ 	POVRayPath = lcGetProfileString(LC_PROFILE_POVRAY_PATH);
+ 	Arguments.append("+FN");
+ 	Arguments.append("-D");
+-#endif
+-
+-#ifdef Q_OS_MACOS
++#elif defined(Q_OS_WIN)
++	POVRayPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + QLatin1String("/povconsole32-sse2.exe"));
++#elif defined(Q_OS_MACOS)
+ 	POVRayPath = QDir::cleanPath(QCoreApplication::applicationDirPath() + QLatin1String("/povray"));
+-#endif
++#endif // LC_ENABLE_SYSTEM_POVRAY
+ 
+ 	const QString POVRayDir = QFileInfo(POVRayPath).absolutePath();
+ 	const QString IncludePath = QDir::cleanPath(POVRayDir + "/include");
+@@ -333,9 +329,9 @@ void lcRenderDialog::RenderPOVRay()
+ 	}
+ 
+ 	lcRenderProcess* Process = new lcRenderProcess(this);
+-#ifdef Q_OS_LINUX
++#if LC_ENABLE_SYSTEM_POVRAY
+ 	connect(Process, &QProcess::readyReadStandardError, this, [this]() { bool Error; ReadStdErr(Error); });
+-#endif
++#endif // LC_ENABLE_SYSTEM_POVRAY
+ 	QStringList POVEnv = QProcess::systemEnvironment();
+ 	POVEnv.prepend("POV_IGNORE_SYSCONF_MSG=1");
+ 	Process->setEnvironment(POVEnv);
+@@ -749,10 +745,10 @@ void lcRenderDialog::Update()
+ 
+ 	if (ProcessFinished)
+ 	{
+-#ifdef Q_OS_LINUX
++#if LC_ENABLE_SYSTEM_POVRAY
+ 		QByteArray Output = mProcess->readAllStandardOutput();
+ 		mImage = QImage::fromData(Output);
+-#endif
++#endif // LC_ENABLE_SYSTEM_POVRAY
+ 
+ 		ShowResult();
+ 		CloseProcess();
+@@ -946,4 +942,4 @@ lcRenderProcess::~lcRenderProcess()
+ 	}
+ }
+ 
+-#endif // LC_DISABLE_RENDER_DIALOG
++#endif // !LC_DISABLE_RENDER_DIALOG
+diff --git a/qt/lc_renderdialog.h b/qt/lc_renderdialog.h
+index 7830c38..5c334fe 100644
+--- a/qt/lc_renderdialog.h
++++ b/qt/lc_renderdialog.h
+@@ -14,7 +14,7 @@ enum class lcRenderDialogMode
+ 	OpenInBlender
+ };
+ 
+-#ifndef LC_DISABLE_RENDER_DIALOG
++#if !LC_DISABLE_RENDER_DIALOG
+ 
+ namespace Ui {
+ class lcRenderDialog;
+@@ -127,4 +127,4 @@ public:
+ 	}
+ };
+ 
+-#endif // LC_DISABLE_RENDER_DIALOG
++#endif // !LC_DISABLE_RENDER_DIALOG
+diff --git a/qt/qtmain.cpp b/qt/qtmain.cpp
+index ace3239..5aa64e9 100644
+--- a/qt/qtmain.cpp
++++ b/qt/qtmain.cpp
+@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
+ 	{
+ #if !LC_DISABLE_UPDATE_CHECK
+ 		lcDoInitialUpdateCheck();
+-#endif
++#endif // !LC_DISABLE_UPDATE_CHECK
+ 
+ 		ExecReturn = Application.exec();
+ 	}
